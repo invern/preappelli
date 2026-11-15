@@ -107,7 +107,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
       <div class="slot">
         <label class="slot-head">
           <input type="checkbox" id="pres">
-          <span>Giovedì 10 dicembre in presenza con Laura, ore 10:30–13:00</span>
+          <span>Giovedì 10 dicembre in presenza con Laura, ore 10:30–13:30</span>
         </label>
         <div class="detail" id="pres-detail" hidden>
           <label class="slot-head">
@@ -270,7 +270,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
     });
     if (pres && pres.on) {
       any = true;
-      lines.push("Gio 10 dic in presenza (10:30–13:00): disponibile" + (pres.over ? ", eventualmente un po' oltre" : ""));
+      lines.push("Gio 10 dic in presenza (10:30–13:30): disponibile" + (pres.over ? ", eventualmente un po' oltre" : ""));
     }
     if (!any) lines.push("Nessuna fascia disponibile");
     if (note) { lines.push(""); lines.push("Note: " + note); }
