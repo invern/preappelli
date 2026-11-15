@@ -155,7 +155,12 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   function fmt(min) { var h = Math.floor(min / 60), m = min % 60; return h + ":" + (m < 10 ? "0" : "") + m; }
   function toMin(t) { var p = t.split(":"); return Number(p[0]) * 60 + Number(p[1]); }
   function slotLabel(id) { var s = SLOT_BY_ID[id]; return s.day.replace(" dicembre", " dic") + " " + SLOT_NAME[s.part]; }
-  function hoursText(n) { return n + (n === 1 ? " ora" : " ore"); }
+  function hoursText(n) {
+    if (n === 1) return "1 ora";
+    if (n % 1 === 0) return n + " ore";
+    var f = Math.floor(n);
+    return f + (f === 1 ? " ora e mezza" : " ore e mezza");
+  }
 
   $("#dest").textContent = RECIPIENT;
 
@@ -195,11 +200,11 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
       var chips = el("div", "chips");
       chips.setAttribute("role", "radiogroup");
       chips.setAttribute("aria-label", "Ore disponibili, " + d[1] + " " + SLOT_NAME[part]);
-      for (var n = 1; n <= 5; n++) {
+      for (var n = 1; n <= 5; n += 0.5) {
         var c = el("label", "chip");
         var rb = document.createElement("input");
         rb.type = "radio"; rb.name = "h-" + id; rb.value = String(n); rb.id = "h-" + id + "-" + n;
-        c.appendChild(rb); c.appendChild(el("span", null, n + " h"));
+        c.appendChild(rb); c.appendChild(el("span", null, String(n).replace(".", ",") + " h"));
         chips.appendChild(c);
       }
       r2.appendChild(chips);
@@ -212,8 +217,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
   function updateChips(id) {
     var s = SLOT_BY_ID[id], w = WINDOWS[s.part], v = $("#s-" + id).value;
-    for (var n = 1; n <= 5; n++) {
-      var r = $("#h-" + id + "-" + n);
+    for (var n = 1; n <= 5; n += 0.5) {
+      var r = document.getElementById("h-" + id + "-" + n);
       var tooLong = v && (toMin(v) + n * 60 > w.end);
       r.disabled = !!tooLong;
       if (tooLong && r.checked) r.checked = false;
