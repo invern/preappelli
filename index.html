@@ -101,6 +101,16 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
     <input type="text" id="name" autocomplete="name">
   </div>
 
+  <div class="field">
+    <span class="lbl" id="part-lbl">Partecipi ai preappelli?</span>
+    <div class="chips" role="radiogroup" aria-labelledby="part-lbl">
+      <label class="chip"><input type="radio" name="part" id="part-si" value="si" checked><span>Partecipo</span></label>
+      <label class="chip"><input type="radio" name="part" id="part-no" value="no"><span>Non partecipo</span></label>
+    </div>
+  </div>
+
+  <div id="choices">
+
   <div id="pres-box" class="days">
     <div class="day featured">
       <h3>Appello in presenza</h3>
@@ -122,6 +132,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   <div class="divider">Tutte le altre disponibilità sono per esami on-line con Teams</div>
 
   <div id="days" class="days"></div>
+  </div>
 
   <div class="field">
     <label class="lbl" for="note">Note (facoltativo)</label>
@@ -277,6 +288,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
     return lines.join("\n");
   }
   function refreshCount() {
+    if ($("#part-no").checked) { $("#count").textContent = "Non partecipo"; return; }
+    if (!$("#part-si").checked) { $("#count").textContent = "Scegli se partecipi"; return; }
     var n = Object.keys(collect().slots).length + ($("#pres").checked ? 1 : 0);
     $("#count").textContent = n === 0 ? "Nessuna fascia selezionata" : n + (n === 1 ? " fascia selezionata" : " fasce selezionate");
   }
@@ -297,6 +310,15 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   function prepare() {
     var name = $("#name").value.trim();
     if (!name) { setStatus("Scrivi il tuo nome e cognome.", "err"); $("#name").focus(); return null; }
+    if (!$("#part-si").checked && !$("#part-no").checked) {
+      setStatus("Indica se partecipi o non partecipi.", "err");
+      $("#part-si").scrollIntoView({ block: "center" });
+      return null;
+    }
+    if ($("#part-no").checked) {
+      var nt = $("#note").value.trim();
+      return { name: name, text: "Disponibilità preappelli – " + name + "\n\nNon partecipo" + (nt ? "\n\nNote: " + nt : "") };
+    }
     var c = collect();
     if (c.incomplete.length) {
       var first = c.incomplete[0];
@@ -342,6 +364,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
     if (!on) $("#pres-over").checked = false;
     refreshCount(); setStatus(""); $("#fallback").hidden = true;
   });
+
+  function onPart() {
+    $("#choices").hidden = !$("#part-si").checked;
+    refreshCount(); setStatus(""); $("#fallback").hidden = true;
+  }
+  $("#part-si").addEventListener("change", onPart);
+  $("#part-no").addEventListener("change", onPart);
 
   refreshCount();
 })();
