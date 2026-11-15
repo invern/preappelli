@@ -50,6 +50,11 @@ textarea { min-height: 76px; resize: vertical; }
 .days { display: grid; gap: 10px; margin-bottom: 20px; }
 .day { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
 .day h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.day.featured { border: 2px solid var(--accent); padding: 12px 14px; }
+.day.featured h3 { color: var(--accent); font-size: 15px; }
+.day.featured .slot-head { font-weight: 600; }
+.day.featured .detail .slot-head { font-weight: 400; }
+.divider { border-top: 2px solid var(--line); padding-top: 14px; margin: 6px 0 14px; font-weight: 600; text-wrap: balance; }
 .slot { border-top: 1px solid var(--line); padding: 8px 0; }
 .slot:first-of-type { border-top: 0; }
 .slot-head { display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 32px; }
@@ -89,12 +94,32 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 <body>
 <main>
   <h1>Disponibilità preappelli</h1>
-  <p class="lead">Dal 3 al 22 dicembre. Spunta le fasce in cui puoi esserci e indica a che ora inizi e per quante ore. Le fasce che lasci vuote contano come non disponibile. Mattina dalle 8:00 alle 13:00 (ultimo inizio alle 12:00), pomeriggio dalle 13:00 alle 19:00 (ultimo inizio alle 18:00). Martedì 8 dicembre è festivo e non è in elenco.</p>
+  <p class="lead">Dal 4 al 22 dicembre. Spunta le fasce in cui puoi esserci e indica a che ora inizi e per quante ore. Le fasce che lasci vuote contano come non disponibile. Mattina dalle 8:00 alle 13:00 (ultimo inizio alle 12:00), pomeriggio dalle 13:00 alle 19:00 (ultimo inizio alle 18:00). Martedì 8 dicembre è festivo e non è in elenco.</p>
 
   <div class="field">
     <label class="lbl" for="name">Nome e cognome</label>
     <input type="text" id="name" autocomplete="name">
   </div>
+
+  <div id="pres-box" class="days">
+    <div class="day featured">
+      <h3>Appello in presenza</h3>
+      <div class="slot">
+        <label class="slot-head">
+          <input type="checkbox" id="pres">
+          <span>Giovedì 10 dicembre in presenza con Laura, ore 10:30–13:00</span>
+        </label>
+        <div class="detail" id="pres-detail" hidden>
+          <label class="slot-head">
+            <input type="checkbox" id="pres-over">
+            <span>Eventualmente posso un po' oltre</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">Tutte le altre disponibilità sono per esami on-line con Teams</div>
 
   <div id="days" class="days"></div>
 
@@ -122,7 +147,6 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   var WINDOWS = { m: { start: 8 * 60, last: 12 * 60, end: 13 * 60 }, p: { start: 13 * 60, last: 18 * 60, end: 19 * 60 } };
 
   var DAYS = [
-    ["2026-12-03", "Gio 3 dicembre", ["p"]],
     ["2026-12-04", "Ven 4 dicembre", ["m", "p"]],
     ["2026-12-05", "Sab 5 dicembre", ["m", "p"]],
     ["2026-12-07", "Lun 7 dicembre", ["m", "p"]],
@@ -237,19 +261,23 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
     });
     return { slots: out, incomplete: incomplete };
   }
-  function summaryText(name, slots, note) {
+  function summaryText(name, slots, note, pres) {
     var lines = ["Disponibilità preappelli – " + (name || "(nome mancante)"), ""];
     var any = false;
     SLOTS.forEach(function (s) {
       var v = slots[s.id];
       if (v) { any = true; lines.push(slotLabel(s.id) + ": dalle " + v.start + ", " + hoursText(v.hours)); }
     });
+    if (pres && pres.on) {
+      any = true;
+      lines.push("Gio 10 dic in presenza (10:30–13:00): disponibile" + (pres.over ? ", eventualmente un po' oltre" : ""));
+    }
     if (!any) lines.push("Nessuna fascia disponibile");
     if (note) { lines.push(""); lines.push("Note: " + note); }
     return lines.join("\n");
   }
   function refreshCount() {
-    var n = Object.keys(collect().slots).length;
+    var n = Object.keys(collect().slots).length + ($("#pres").checked ? 1 : 0);
     $("#count").textContent = n === 0 ? "Nessuna fascia selezionata" : n + (n === 1 ? " fascia selezionata" : " fasce selezionate");
   }
   function setStatus(msg, kind) {
@@ -276,7 +304,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
       $("#s-" + first).scrollIntoView({ block: "center" });
       return null;
     }
-    return { name: name, text: summaryText(name, c.slots, $("#note").value.trim()) };
+    var pres = { on: $("#pres").checked, over: $("#pres").checked && $("#pres-over").checked };
+    return { name: name, text: summaryText(name, c.slots, $("#note").value.trim(), pres) };
   }
   function copyText(text, okMsg) {
     var fb = $("#fallback");
@@ -305,6 +334,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   $("#copy").addEventListener("click", function () {
     var p = prepare(); if (!p) return;
     copyText(p.text, "Riepilogo copiato: incollalo in un messaggio.");
+  });
+
+  $("#pres-box").addEventListener("change", function () {
+    var on = $("#pres").checked;
+    $("#pres-detail").hidden = !on;
+    if (!on) $("#pres-over").checked = false;
+    refreshCount(); setStatus(""); $("#fallback").hidden = true;
   });
 
   refreshCount();
