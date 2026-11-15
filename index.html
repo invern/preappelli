@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Disponibilità preappelli</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: una colonna stretta, un blocco per giorno, righe mattina/pomeriggio che si aprono quando selezionate; barra di invio fissa in basso. */
+:root {
+  color-scheme: light;
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --fg: #1b2430;
+  --muted: #5a6677;
+  --line: #d6dce4;
+  --accent: #1d5c78;
+  --accent-fg: #ffffff;
+  --ok: #276749;
+  --err: #a32630;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #11161c; --surface: #19202a; --fg: #e5e9ef; --muted: #98a4b4; --line: #2b3541;
+    --accent: #6db4d1; --accent-fg: #0a1a22; --ok: #6cc294; --err: #f08a91;
+  }
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-block: 28px 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 640px; margin: 0 auto; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0 0 20px; max-width: 60ch; }
+.field { display: grid; gap: 6px; margin-bottom: 20px; }
+.lbl { font-weight: 600; font-size: 13px; letter-spacing: .02em; }
+input[type="text"], textarea, select {
+  font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 9px 10px; width: 100%; min-width: 0;
+}
+textarea { min-height: 76px; resize: vertical; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.days { display: grid; gap: 10px; margin-bottom: 20px; }
+.day { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.day h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.slot { border-top: 1px solid var(--line); padding: 8px 0; }
+.slot:first-of-type { border-top: 0; }
+.slot-head { display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 32px; }
+.slot-head input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.slot-head .win { color: var(--muted); font-size: 13px; }
+.detail { display: grid; gap: 10px; padding: 8px 0 4px 30px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.row .lbl { min-width: 74px; font-weight: 500; color: var(--muted); }
+.row select { width: auto; min-width: 96px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span { display: inline-block; min-width: 40px; text-align: center; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-variant-numeric: tabular-nums; }
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.chip input:disabled { cursor: not-allowed; }
+.chip input:disabled + span { opacity: .4; text-decoration: line-through; }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bar {
+  position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--line);
+  padding-block: 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 8px;
+}
+.bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); flex: 1 1 100%; }
+button { font: inherit; border-radius: 6px; padding: 9px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.status { min-height: 1.3em; font-size: 14px; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--err); }
+.dest { color: var(--muted); font-size: 13px; margin: 0; }
+.fallback { font-size: 13px; min-height: 120px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Disponibilità preappelli</h1>
+  <p class="lead">Dal 3 al 22 dicembre. Spunta le fasce in cui puoi esserci e indica a che ora inizi e per quante ore. Le fasce che lasci vuote contano come non disponibile. Mattina dalle 8:00 alle 13:00 (ultimo inizio alle 12:00), pomeriggio dalle 13:00 alle 19:00 (ultimo inizio alle 18:00). Martedì 8 dicembre è festivo e non è in elenco.</p>
+
+  <div class="field">
+    <label class="lbl" for="name">Nome e cognome</label>
+    <input type="text" id="name" autocomplete="name">
+  </div>
+
+  <div id="days" class="days"></div>
+
+  <div class="field">
+    <label class="lbl" for="note">Note (facoltativo)</label>
+    <textarea id="note" placeholder="Per esempio: il 10 posso solo fino alle 12"></textarea>
+  </div>
+
+  <div class="bar">
+    <span class="count" id="count">Nessuna fascia selezionata</span>
+    <div class="bar-row">
+      <button type="button" class="primary" id="mail">Invia per email</button>
+      <button type="button" id="wa">Invia su WhatsApp</button>
+      <button type="button" id="copy">Copia riepilogo</button>
+    </div>
+    <p class="dest">Le risposte vanno a <span id="dest"></span></p>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <textarea id="fallback" class="fallback" readonly hidden></textarea>
+  </div>
+</main>
+
+<script>
+(function () {
+  var RECIPIENT = "teologia.unicatt@gmail.com";
+  var WINDOWS = { m: { start: 8 * 60, last: 12 * 60, end: 13 * 60 }, p: { start: 13 * 60, last: 18 * 60, end: 19 * 60 } };
+
+  var DAYS = [
+    ["2026-12-03", "Gio 3 dicembre", ["p"]],
+    ["2026-12-04", "Ven 4 dicembre", ["m", "p"]],
+    ["2026-12-05", "Sab 5 dicembre", ["m", "p"]],
+    ["2026-12-07", "Lun 7 dicembre", ["m", "p"]],
+    ["2026-12-09", "Mer 9 dicembre", ["m", "p"]],
+    ["2026-12-10", "Gio 10 dicembre", ["m", "p"]],
+    ["2026-12-11", "Ven 11 dicembre", ["m", "p"]],
+    ["2026-12-12", "Sab 12 dicembre", ["m", "p"]],
+    ["2026-12-14", "Lun 14 dicembre", ["m", "p"]],
+    ["2026-12-15", "Mar 15 dicembre", ["m", "p"]],
+    ["2026-12-16", "Mer 16 dicembre", ["m", "p"]],
+    ["2026-12-17", "Gio 17 dicembre", ["m", "p"]],
+    ["2026-12-18", "Ven 18 dicembre", ["m", "p"]],
+    ["2026-12-19", "Sab 19 dicembre", ["m", "p"]],
+    ["2026-12-21", "Lun 21 dicembre", ["m", "p"]],
+    ["2026-12-22", "Mar 22 dicembre", ["p"]]
+  ];
+  var SLOT_NAME = { m: "mattina", p: "pomeriggio" };
+  var SLOTS = [];
+  DAYS.forEach(function (d) { d[2].forEach(function (s) { SLOTS.push({ id: d[0] + "-" + s, day: d[1], part: s }); }); });
+  var SLOT_BY_ID = {};
+  SLOTS.forEach(function (s) { SLOT_BY_ID[s.id] = s; });
+
+  function $(s) { return document.querySelector(s); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function fmt(min) { var h = Math.floor(min / 60), m = min % 60; return h + ":" + (m < 10 ? "0" : "") + m; }
+  function toMin(t) { var p = t.split(":"); return Number(p[0]) * 60 + Number(p[1]); }
+  function slotLabel(id) { var s = SLOT_BY_ID[id]; return s.day.replace(" dicembre", " dic") + " " + SLOT_NAME[s.part]; }
+  function hoursText(n) { return n + (n === 1 ? " ora" : " ore"); }
+
+  $("#dest").textContent = RECIPIENT;
+
+  /* ---------- form ---------- */
+  var daysBox = $("#days");
+  DAYS.forEach(function (d) {
+    var box = el("div", "day");
+    box.appendChild(el("h3", null, d[1]));
+    d[2].forEach(function (part) {
+      var id = d[0] + "-" + part, w = WINDOWS[part];
+      var slot = el("div", "slot");
+      var head = el("label", "slot-head");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = "c-" + id; cb.dataset.slot = id;
+      head.appendChild(cb);
+      head.appendChild(el("span", null, part === "m" ? "Mattina" : "Pomeriggio"));
+      head.appendChild(el("span", "win", fmt(w.start) + "–" + fmt(w.end)));
+      slot.appendChild(head);
+
+      var detail = el("div", "detail");
+      detail.id = "d-" + id; detail.hidden = true;
+
+      var r1 = el("div", "row");
+      var l1 = el("label", "lbl", "Inizio"); l1.htmlFor = "s-" + id;
+      var sel = document.createElement("select");
+      sel.id = "s-" + id; sel.dataset.slot = id;
+      var ph = document.createElement("option"); ph.value = ""; ph.textContent = "Scegli";
+      sel.appendChild(ph);
+      for (var t = w.start; t <= w.last; t += 30) {
+        var o = document.createElement("option"); o.value = fmt(t); o.textContent = "dalle " + fmt(t);
+        sel.appendChild(o);
+      }
+      r1.appendChild(l1); r1.appendChild(sel);
+
+      var r2 = el("div", "row");
+      r2.appendChild(el("span", "lbl", "Durata"));
+      var chips = el("div", "chips");
+      chips.setAttribute("role", "radiogroup");
+      chips.setAttribute("aria-label", "Ore disponibili, " + d[1] + " " + SLOT_NAME[part]);
+      for (var n = 1; n <= 5; n++) {
+        var c = el("label", "chip");
+        var rb = document.createElement("input");
+        rb.type = "radio"; rb.name = "h-" + id; rb.value = String(n); rb.id = "h-" + id + "-" + n;
+        c.appendChild(rb); c.appendChild(el("span", null, n + " h"));
+        chips.appendChild(c);
+      }
+      r2.appendChild(chips);
+      detail.appendChild(r1); detail.appendChild(r2);
+      slot.appendChild(detail);
+      box.appendChild(slot);
+    });
+    daysBox.appendChild(box);
+  });
+
+  function updateChips(id) {
+    var s = SLOT_BY_ID[id], w = WINDOWS[s.part], v = $("#s-" + id).value;
+    for (var n = 1; n <= 5; n++) {
+      var r = $("#h-" + id + "-" + n);
+      var tooLong = v && (toMin(v) + n * 60 > w.end);
+      r.disabled = !!tooLong;
+      if (tooLong && r.checked) r.checked = false;
+    }
+  }
+
+  function collect() {
+    var out = {}, incomplete = [];
+    SLOTS.forEach(function (s) {
+      if (!$("#c-" + s.id).checked) return;
+      var start = $("#s-" + s.id).value;
+      var chk = document.querySelector('input[name="h-' + s.id + '"]:checked');
+      var hours = chk ? Number(chk.value) : 0;
+      if (!start || !hours) incomplete.push(s.id);
+      out[s.id] = { start: start, hours: hours };
+    });
+    return { slots: out, incomplete: incomplete };
+  }
+  function summaryText(name, slots, note) {
+    var lines = ["Disponibilità preappelli – " + (name || "(nome mancante)"), ""];
+    var any = false;
+    SLOTS.forEach(function (s) {
+      var v = slots[s.id];
+      if (v) { any = true; lines.push(slotLabel(s.id) + ": dalle " + v.start + ", " + hoursText(v.hours)); }
+    });
+    if (!any) lines.push("Nessuna fascia disponibile");
+    if (note) { lines.push(""); lines.push("Note: " + note); }
+    return lines.join("\n");
+  }
+  function refreshCount() {
+    var n = Object.keys(collect().slots).length;
+    $("#count").textContent = n === 0 ? "Nessuna fascia selezionata" : n + (n === 1 ? " fascia selezionata" : " fasce selezionate");
+  }
+  function setStatus(msg, kind) {
+    var s = $("#status"); s.textContent = msg || ""; s.className = "status" + (kind ? " " + kind : "");
+  }
+
+  daysBox.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.slot) {
+      if (t.type === "checkbox") $("#d-" + t.dataset.slot).hidden = !t.checked;
+      if (t.tagName === "SELECT") updateChips(t.dataset.slot);
+    }
+    refreshCount(); setStatus(""); $("#fallback").hidden = true;
+  });
+
+  /* ---------- invio ---------- */
+  function prepare() {
+    var name = $("#name").value.trim();
+    if (!name) { setStatus("Scrivi il tuo nome e cognome.", "err"); $("#name").focus(); return null; }
+    var c = collect();
+    if (c.incomplete.length) {
+      var first = c.incomplete[0];
+      setStatus("Per " + slotLabel(first) + " mancano l'ora di inizio o la durata.", "err");
+      $("#s-" + first).scrollIntoView({ block: "center" });
+      return null;
+    }
+    return { name: name, text: summaryText(name, c.slots, $("#note").value.trim()) };
+  }
+  function copyText(text, okMsg) {
+    var fb = $("#fallback");
+    var done = function () { fb.hidden = true; setStatus(okMsg, "ok"); };
+    var fail = function () {
+      fb.hidden = false; fb.value = text; fb.focus(); fb.select();
+      setStatus("Copia automatica non riuscita: il testo è selezionato, copialo a mano.", "err");
+    };
+    try { navigator.clipboard.writeText(text).then(done, fail); } catch (e) { fail(); }
+  }
+
+  $("#mail").addEventListener("click", function () {
+    var p = prepare(); if (!p) return;
+    var url = "mailto:" + RECIPIENT + "?subject=" + encodeURIComponent("Disponibilità preappelli – " + p.name) + "&body=" + encodeURIComponent(p.text);
+    window.location.href = url;
+    setStatus("Si apre l'app di posta con il messaggio pronto: controllalo e premi Invia lì. Se non si apre, usa «Copia riepilogo».", "ok");
+  });
+  $("#wa").addEventListener("click", function () {
+    var p = prepare(); if (!p) return;
+    var url = "https://wa.me/?text=" + encodeURIComponent(p.text);
+    var w = null;
+    try { w = window.open(url, "_blank"); } catch (e) {}
+    if (!w) window.location.href = url;
+    setStatus("Si apre WhatsApp: scegli il contatto della professoressa e premi Invia.", "ok");
+  });
+  $("#copy").addEventListener("click", function () {
+    var p = prepare(); if (!p) return;
+    copyText(p.text, "Riepilogo copiato: incollalo in un messaggio.");
+  });
+
+  refreshCount();
+})();
+</script>
+</body>
+</html>
